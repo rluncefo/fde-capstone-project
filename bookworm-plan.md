@@ -319,7 +319,7 @@ client/src/components/layout/index.ts   (barrel export)
 **Relevant Context:**
 - Cart badge shows red dot with count (visible in all screenshots top-right)
 - `CartDrawer` must be rendered inside `MainLayout` so it overlays every page, not just cart-specific pages
-- `UserDropdown` closes on outside click (use `useRef` + document click listener)
+- `UserDropdown` closes on outside click (uses fixed backdrop overlay to reliably handle dismissals)
 - Category list matches screenshot sidebar exactly
 - Active category is highlighted in a brighter blue/white
 

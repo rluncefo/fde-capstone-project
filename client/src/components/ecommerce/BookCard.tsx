@@ -28,7 +28,8 @@ export default function BookCard({ book, size = 'normal', showAddToCart = false 
   const navigate = useNavigate();
   const { addItem } = useCart();
   const imgWidth = size === 'compact' ? 72 : 96;
-  const visibleCategories = book.categories.slice(0, 2);
+  const categories = Array.isArray(book?.categories) ? book.categories : [];
+  const visibleCategories = categories.slice(0, 2);
 
   function handleCardClick(e: React.MouseEvent<HTMLDivElement>) {
     // Don't navigate if the click originated from a button, link, input, or
@@ -116,7 +117,7 @@ export default function BookCard({ book, size = 'normal', showAddToCart = false 
         </div>
 
         <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-          {book.format.charAt(0) + book.format.slice(1).toLowerCase()}
+          {book?.format ? book.format.charAt(0) + book.format.slice(1).toLowerCase() : ''}
         </div>
 
         {visibleCategories.length > 0 && (

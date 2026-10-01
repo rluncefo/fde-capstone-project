@@ -30,7 +30,17 @@ function serializeOrder(order: any) {
       ...item,
       price: Number(item.priceAtTime ?? 0),
       priceAtTime: Number(item.priceAtTime ?? 0),
-      book: item.book ? { ...item.book, price: Number(item.book.price ?? 0) } : item.book,
+      book: item.book
+        ? {
+            ...item.book,
+            price: Number(item.book.price ?? 0),
+            categories: Array.isArray(item.book.categories)
+              ? item.book.categories.map((bc: any) =>
+                  bc.category ? { id: bc.category.id, name: bc.category.name, slug: bc.category.slug } : bc
+                )
+              : [],
+          }
+        : item.book,
     })),
   };
 }
@@ -45,7 +55,16 @@ export async function listOrders(
       where: { userId: req.user!.id },
       orderBy: { createdAt: 'desc' },
       include: {
-        items: { include: { book: true } },
+        items: {
+          include: {
+            book: {
+              include: {
+                author: true,
+                categories: { include: { category: true } },
+              },
+            },
+          },
+        },
         payment: true,
       },
     });
@@ -62,19 +81,35 @@ export async function createOrder(
 ): Promise<void> {
   try {
     const {
-      items,
+      items: requestItems,
       deliveryAddress,
       couponCode,
     } = req.body as {
-      items: Array<{ bookId: string; quantity: number }>;
+      items?: Array<{ bookId: string; quantity: number }>;
       deliveryAddress: Prisma.InputJsonValue;
       couponCode?: string;
     };
 
     const userId = req.user!.id;
 
+    // Resolve line items: from request body or fallback to current cart
+    let resolvedItems = requestItems;
+    if (!resolvedItems || resolvedItems.length === 0) {
+      const cartItems = await prisma.cartItem.findMany({
+        where: { userId },
+      });
+      if (!cartItems || cartItems.length === 0) {
+        res.status(400).json({ message: 'Cart is empty' });
+        return;
+      }
+      resolvedItems = cartItems.map((ci) => ({
+        bookId: ci.bookId,
+        quantity: ci.quantity,
+      }));
+    }
+
     // Fetch book prices
-    const bookIds = items.map((i) => i.bookId);
+    const bookIds = resolvedItems.map((i) => i.bookId);
     const books = await prisma.book.findMany({ where: { id: { in: bookIds } } });
     const bookMap = new Map(books.map((b) => [b.id, b]));
 
@@ -90,7 +125,7 @@ export async function createOrder(
     }
 
     // Calculate amounts
-    const subtotal = items.reduce((sum, item) => {
+    const subtotal = resolvedItems.reduce((sum, item) => {
       const book = bookMap.get(item.bookId);
       return sum + Number(book?.price ?? 0) * item.quantity;
     }, 0);
@@ -108,7 +143,7 @@ export async function createOrder(
           deliveryAddress,
           couponCode: couponCode ?? null,
           items: {
-            create: items.map((item) => ({
+            create: resolvedItems!.map((item) => ({
               bookId: item.bookId,
               quantity: item.quantity,
               priceAtTime: bookMap.get(item.bookId)!.price,
@@ -116,7 +151,16 @@ export async function createOrder(
           },
         },
         include: {
-          items: { include: { book: true } },
+          items: {
+            include: {
+              book: {
+                include: {
+                  author: true,
+                  categories: { include: { category: true } },
+                },
+              },
+            },
+          },
         },
       });
 
@@ -151,7 +195,16 @@ export async function getOrder(
     const order = await prisma.order.findFirst({
       where: { id, userId },
       include: {
-        items: { include: { book: true } },
+        items: {
+          include: {
+            book: {
+              include: {
+                author: true,
+                categories: { include: { category: true } },
+              },
+            },
+          },
+        },
         payment: true,
       },
     });
@@ -197,7 +250,19 @@ export async function cancelOrder(
     const updated = await prisma.order.update({
       where: { id },
       data: { status: 'CANCELLED' },
-      include: { items: { include: { book: true } }, payment: true },
+      include: {
+        items: {
+          include: {
+            book: {
+              include: {
+                author: true,
+                categories: { include: { category: true } },
+              },
+            },
+          },
+        },
+        payment: true,
+      },
     });
 
     res.json(serializeOrder(updated));

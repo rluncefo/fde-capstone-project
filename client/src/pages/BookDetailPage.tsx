@@ -304,8 +304,8 @@ export default function BookDetailPage() {
               >
                 <span>{book.language}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <StarRating value={book.rating} readonly size="sm" />
-                  <span>{book.rating?.toFixed(1)}</span>
+                  <StarRating value={Number(book.rating)} readonly size="sm" />
+                  <span>{Number(book.rating).toFixed(1)}</span>
                 </span>
                 <span>{book.salesCount?.toLocaleString()} copies sold</span>
               </div>

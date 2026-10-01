@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -9,38 +8,37 @@ interface UserDropdownProps {
 
 export default function UserDropdown({ isOpen, onClose }: UserDropdownProps) {
   const { user, isAuthenticated, logout } = useAuth();
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    }
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   return (
-    <div
-      ref={ref}
-      style={{
-        position: 'absolute',
-        top: '100%',
-        right: 0,
-        marginTop: 8,
-        backgroundColor: 'var(--color-bg-secondary)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 8,
-        minWidth: 200,
-        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-        zIndex: 100,
-        padding: '8px 0',
-      }}
-    >
+    <>
+      {/* Invisible fixed backdrop overlay to capture outside clicks reliably */}
+      <div
+        data-testid="user-dropdown-backdrop"
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 90,
+          cursor: 'default',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          top: '100%',
+          right: 0,
+          marginTop: 8,
+          backgroundColor: 'var(--color-bg-secondary)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 8,
+          minWidth: 200,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          zIndex: 100,
+          padding: '8px 0',
+        }}
+      >
       {isAuthenticated && user ? (
         <>
           <div
@@ -116,6 +114,7 @@ export default function UserDropdown({ isOpen, onClose }: UserDropdownProps) {
           Login
         </Link>
       )}
-    </div>
+      </div>
+    </>
   );
 }

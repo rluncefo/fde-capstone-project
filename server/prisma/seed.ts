@@ -25,7 +25,6 @@ async function main() {
 
   // ─── Categories ─────────────────────────────────────────────────────────────
   const categoryData = [
-    { name: 'All', slug: 'all' },
     { name: 'Romance', slug: 'romance' },
     { name: 'Mystery', slug: 'mystery' },
     { name: 'Science Fiction', slug: 'science-fiction' },

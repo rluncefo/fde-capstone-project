@@ -1,0 +1,219 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  GUEST
+  MEMBER
+}
+
+enum BookFormat {
+  PAPERBACK
+  HARDCOVER
+  EBOOK
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  UPI
+  WALLET
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  passwordHash  String
+  name          String
+  role          Role       @default(MEMBER)
+  giftPoints    Int        @default(0)
+  savedAddress  Json?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  cartItems     CartItem[]
+  wishlistItems Wishlist[]
+  orders        Order[]
+  reviews       Review[]
+}
+
+model Category {
+  id             String         @id @default(cuid())
+  name           String
+  slug           String         @unique
+  bookCategories BookCategory[]
+}
+
+model Author {
+  id        String  @id @default(cuid())
+  name      String
+  bio       String?
+  avatarUrl String?
+  books     Book[]
+}
+
+model Store {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  policies    Json?
+}
+
+model Book {
+  id            String       @id @default(cuid())
+  title         String
+  slug          String       @unique
+  description   String
+  coverUrl      String
+  price         Decimal      @db.Decimal(10, 2)
+  format        BookFormat
+  language      String       @default("English")
+  stockCount    Int          @default(0)
+  authorId      String
+  author        Author       @relation(fields: [authorId], references: [id])
+  rating        Decimal      @default(0) @db.Decimal(3, 2)
+  salesCount    Int          @default(0)
+  isRecommended Boolean      @default(false)
+  isBestseller  Boolean      @default(false)
+  isNewLaunch   Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+
+  categories    BookCategory[]
+  cartItems     CartItem[]
+  wishlistItems Wishlist[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+
+  @@index([slug])
+  @@index([authorId])
+  @@index([isRecommended])
+  @@index([isBestseller])
+  @@index([isNewLaunch])
+}
+
+model BookCategory {
+  bookId     String
+  categoryId String
+  book       Book     @relation(fields: [bookId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@id([bookId, categoryId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  bookId    String
+  userId    String
+  rating    Int
+  content   String
+  createdAt DateTime @default(now())
+
+  book Book @relation(fields: [bookId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([bookId])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  bookId    String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  book Book @relation(fields: [bookId], references: [id])
+
+  @@unique([userId, bookId])
+  @@index([userId])
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  bookId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  book Book @relation(fields: [bookId], references: [id])
+
+  @@unique([userId, bookId])
+  @@index([userId])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  userId          String
+  status          OrderStatus @default(PENDING)
+  totalAmount     Decimal     @db.Decimal(10, 2)
+  tax             Decimal     @db.Decimal(10, 2)
+  discount        Decimal     @default(0) @db.Decimal(10, 2)
+  deliveryAddress Json
+  couponCode      String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user    User        @relation(fields: [userId], references: [id])
+  items   OrderItem[]
+  payment Payment?
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id           String  @id @default(cuid())
+  orderId      String
+  bookId       String
+  quantity     Int
+  priceAtTime  Decimal @db.Decimal(10, 2)
+
+  order Order @relation(fields: [orderId], references: [id])
+  book  Book  @relation(fields: [bookId], references: [id])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  orderId        String        @unique
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  amount         Decimal       @db.Decimal(10, 2)
+  transactionRef String?
+  createdAt      DateTime      @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+model Coupon {
+  id             String  @id @default(cuid())
+  code           String  @unique
+  discountAmount Decimal @db.Decimal(10, 2)
+  isActive       Boolean @default(true)
+}
